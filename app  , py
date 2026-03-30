@@ -1,0 +1,67 @@
+import dash
+from dash import dcc, html
+from dash.dependencies import Input, Output
+import plotly.graph_objs as go
+import numpy as np
+
+app = dash.Dash(__name__)
+
+# Layout
+app.layout = html.Div(style={'backgroundColor': '#0d1117', 'color': 'white', 'padding': '20px'}, children=[
+
+    html.H1("Inflation & Monetary Policy Simulator", style={'textAlign': 'center'}),
+
+    html.Div([
+        html.Label("Interest Rate (%)"),
+        dcc.Slider(0, 10, step=0.5, value=2, id='interest'),
+
+        html.Label("Inflation (%)"),
+        dcc.Slider(0, 15, step=0.5, value=5, id='inflation'),
+
+        html.Label("Money Supply Growth (%)"),
+        dcc.Slider(0, 20, step=1, value=10, id='money'),
+
+    ], style={'marginBottom': '40px'}),
+
+    dcc.Graph(id='graph'),
+    html.Div(id='output', style={'fontSize': 20, 'marginTop': '20px'})
+])
+
+# Economic Model
+def economic_model(interest, inflation, money):
+    gdp = 3 + 0.4*money - 0.6*interest - 0.3*inflation
+    unemployment = 10 - 0.5*gdp + 0.2*inflation
+    stability = 100 - (inflation*2 + interest*3)
+
+    return gdp, unemployment, stability
+
+# Callback
+@app.callback(
+    [Output('graph', 'figure'),
+     Output('output', 'children')],
+    [Input('interest', 'value'),
+     Input('inflation', 'value'),
+     Input('money', 'value')]
+)
+def update(interest, inflation, money):
+    gdp, unemployment, stability = economic_model(interest, inflation, money)
+
+    x = np.linspace(0, 10, 50)
+    y = 3 + 0.4*money - 0.6*x - 0.3*inflation
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=x, y=y, mode='lines', name='GDP vs Interest'))
+
+    fig.update_layout(
+        template='plotly_dark',
+        title="Economic Dynamics",
+        xaxis_title="Interest Rate",
+        yaxis_title="GDP Growth"
+    )
+
+    text = f"GDP Growth: {gdp:.2f}% | Unemployment: {unemployment:.2f}% | Stability Index: {stability:.2f}"
+
+    return fig, text
+
+if __name__ == '__main__':
+    app.run(debug=True)
